@@ -137,6 +137,11 @@ public final class CoordStore {
 		return true;
 	}
 
+	/** Writes the current state out after a waypoint has been edited in place. */
+	public static void flush() {
+		save();
+	}
+
 	/** Restores the last deleted waypoint. Returns it, or null if there is nothing to undo. */
 	public static Waypoint undo() {
 		if (undoWaypoint == null || undoDimension == null) {

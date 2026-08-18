@@ -28,6 +28,7 @@ them to chat. Nothing is rendered on screen — no HUD, no overlay, no beacons.
 | `/ctrack <name>` | Pin a coord to your HUD |
 | `/cuntrack` | Stop tracking |
 | `/cgui` | Open the waypoint manager |
+| `/chide` | Hide or show everything drawn on screen |
 | `/clabels` | Toggle in-world waypoint labels |
 | `/cconfig` | Settings |
 | `/ckeybind` | Bind the quick-save and list keys |
@@ -64,6 +65,12 @@ vanilla Controls under Miscellaneous.
 
 * **Quick-save** — saves where you stand without opening chat.
 * **Open coord list** — opens the waypoint manager.
+* **Hide overlays** — master switch, pulls the tracker and the in-world labels
+  off the screen in one press. Chat commands keep working, so you lose nothing
+  but the drawing. Also on the settings screen, in the waypoint manager, and as
+  `/chide`. It says nothing in chat: things appearing or vanishing is the
+  feedback.
+* **Stop tracking** — unpins the tracked waypoint without opening anything.
 
 ## Tracking
 
@@ -100,13 +107,24 @@ position and drawn as ordinary HUD text — which keeps the text crisp at any
 distance. Points behind the camera are culled explicitly, because the projection
 divides through by `w` and would otherwise mirror them onto the screen.
 
-Toggle with `/clabels`, or set the draw distance in `/cconfig`.
+Toggle them all with `/clabels`, or set the draw distance in `/cconfig`.
+
+Individual waypoints can be muted instead: select one in `/cgui` and press
+**Hide label**. It stays saved, listed and trackable — only its floating label
+is suppressed. Hidden ones are dimmed and marked `(label hidden)` in both the
+manager and `/cl`, so a muted waypoint never looks like a missing one.
 
 ## Settings
 
-`/cconfig` covers in-world labels on/off, label draw distance, arrival radius,
-whether the tracker sits at the top or bottom of the screen, and the needle
-colour. Everything is stored in `.minecraft/config/coordsmod/config.json`.
+`/cconfig` covers the master hide, in-world labels on/off, label draw distance,
+arrival radius, untrack-on-arrival, whether the tracker sits at the top or
+bottom of the screen, and the needle colour. Everything is stored in
+`.minecraft/config/coordsmod/config.json`.
+
+**Untrack on arrival** is off by default; set it to a radius and the pin drops
+itself once you get that close, so you do not arrive somewhere and then have to
+tell the mod you arrived. It is behaviour rather than drawing, so it stays
+adjustable while overlays are hidden.
 
 The tracked waypoint is remembered per world, so it is still pinned when you
 come back.

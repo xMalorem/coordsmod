@@ -27,6 +27,7 @@ public class WaypointScreen extends Screen {
 	private static final int NAME_COLOR = 0xFFFFFFFF;
 	private static final int TRACKED_COLOR = 0xFFFFDD55;
 	private static final int COORD_COLOR = 0xFFAAAAAA;
+	private static final int HIDDEN_COLOR = 0xFF777777;
 	private static final int DISTANCE_COLOR = 0xFF55DDFF;
 
 	/** Cycle order for the dimension button; null is the "All" view. */
@@ -46,6 +47,7 @@ public class WaypointScreen extends Screen {
 	private Button trackButton;
 	private Button deleteButton;
 	private Button stopButton;
+	private Button hideButton;
 
 	public WaypointScreen(Screen parent) {
 		this(parent, null, false);
@@ -96,15 +98,18 @@ public class WaypointScreen extends Screen {
 		int y = height - 52;
 		trackButton = addRenderableWidget(Button.builder(Component.literal("Track"), b -> trackSelected())
 				.bounds(width / 2 - 154, y, 100, 20).build());
-		deleteButton = addRenderableWidget(Button.builder(Component.literal("Delete"), b -> deleteSelected())
+		hideButton = addRenderableWidget(Button.builder(hideLabel(), b -> toggleHideSelected())
 				.bounds(width / 2 - 50, y, 100, 20).build());
+		deleteButton = addRenderableWidget(Button.builder(Component.literal("Delete"), b -> deleteSelected())
+				.bounds(width / 2 + 54, y, 100, 20).build());
+
 		stopButton = addRenderableWidget(Button.builder(Component.literal("Stop tracking"), b -> {
 			Tracker.clear();
 			updateButtons();
-		}).bounds(width / 2 + 54, y, 100, 20).build());
+		}).bounds(width / 2 - 154, height - 28, 150, 20).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
-				.bounds(width / 2 - 100, height - 28, 200, 20).build());
+				.bounds(width / 2 + 4, height - 28, 150, 20).build());
 
 		updateButtons();
 	}
@@ -169,10 +174,35 @@ public class WaypointScreen extends Screen {
 				width / 2, height - 66, 0xFFFFFFFF);
 	}
 
+	/** Reflects the selected waypoint, since this hides one label rather than all of them. */
+	private Component hideLabel() {
+		Row row = list != null ? list.getSelected() : null;
+
+		if (row != null && row.waypoint.hidden) {
+			return Component.literal("Show label");
+		}
+
+		return Component.literal("Hide label");
+	}
+
+	private void toggleHideSelected() {
+		Row row = list.getSelected();
+
+		if (row == null) {
+			return;
+		}
+
+		row.waypoint.hidden = !row.waypoint.hidden;
+		CoordStore.flush();
+		updateButtons();
+	}
+
 	private void updateButtons() {
 		boolean selected = list != null && list.getSelected() != null;
 		trackButton.active = selected;
 		deleteButton.active = selected;
+		hideButton.active = selected;
+		hideButton.setMessage(hideLabel());
 		stopButton.active = Tracker.tracked() != null;
 	}
 
@@ -243,8 +273,16 @@ public class WaypointScreen extends Screen {
 			int y = getContentY();
 			boolean isTracked = Tracker.tracked() == waypoint;
 
-			extractor.text(font, Component.literal(isTracked ? "→ " + waypoint.name : waypoint.name),
-					x, y + 2, isTracked ? TRACKED_COLOR : NAME_COLOR);
+			String name = isTracked ? "→ " + waypoint.name : waypoint.name;
+			int nameColor = isTracked ? TRACKED_COLOR : NAME_COLOR;
+
+			if (waypoint.hidden) {
+				// Dimmed and labelled, so a hidden waypoint never looks like a missing one.
+				name = name + "  (label hidden)";
+				nameColor = HIDDEN_COLOR;
+			}
+
+			extractor.text(font, Component.literal(name), x, y + 2, nameColor);
 
 			Component detail = Component.literal(Chat.coords(waypoint));
 

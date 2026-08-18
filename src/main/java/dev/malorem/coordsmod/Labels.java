@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import org.joml.Matrix3x2fStack;
 import org.joml.Vector3fc;
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -49,7 +50,7 @@ public final class Labels {
 	private static void draw(GuiGraphicsExtractor extractor) {
 		Config config = Config.get();
 
-		if (!config.labels) {
+		if (config.hidden || !config.labels) {
 			return;
 		}
 
@@ -79,6 +80,10 @@ public final class Labels {
 		List<Placed> placed = new ArrayList<>();
 
 		for (Waypoint waypoint : waypoints) {
+			if (waypoint.hidden) {
+				continue;
+			}
+
 			// Aim at the middle of the block, a little above it, so the label floats clear.
 			Vec3 world = new Vec3(waypoint.x + 0.5, waypoint.y + 1.4, waypoint.z + 0.5);
 			Vec3 offset = world.subtract(cameraPos);
@@ -98,8 +103,8 @@ public final class Labels {
 			}
 
 			Vec3 ndc = client.gameRenderer.projectPointToScreen(world);
-			int screenX = (int) Math.round((ndc.x + 1.0) * 0.5 * extractor.guiWidth());
-			int screenY = (int) Math.round((1.0 - ndc.y) * 0.5 * extractor.guiHeight());
+			double screenX = (ndc.x + 1.0) * 0.5 * extractor.guiWidth();
+			double screenY = (1.0 - ndc.y) * 0.5 * extractor.guiHeight();
 
 			if (screenX < -MARGIN || screenX > extractor.guiWidth() + MARGIN
 					|| screenY < -MARGIN || screenY > extractor.guiHeight() + MARGIN) {
@@ -113,6 +118,8 @@ public final class Labels {
 		placed.sort(Comparator.comparingDouble((Placed p) -> p.distance).reversed());
 
 		Font font = client.font;
+		double guiScale = Math.max(1, client.getWindow().getGuiScale());
+		Matrix3x2fStack pose = extractor.pose();
 
 		for (Placed entry : placed) {
 			Component label = Component.literal(entry.waypoint.name).withStyle(ChatFormatting.WHITE)
@@ -120,17 +127,31 @@ public final class Labels {
 							.withStyle(ChatFormatting.GRAY));
 
 			int halfWidth = font.width(label) / 2;
-			int textY = entry.screenY - font.lineHeight - 3;
+			int textY = -font.lineHeight - 3;
 
-			extractor.fill(entry.screenX - halfWidth - 2, textY - 2,
-					entry.screenX + halfWidth + 2, textY + font.lineHeight, BACKDROP);
-			extractor.centeredText(font, label, entry.screenX, textY, NAME_COLOR);
+			// Positioned by the matrix rather than by rounded coordinates. Rounding to
+			// whole GUI pixels makes a label jump a full GUI pixel at a time, which at
+			// GUI scale 3 is a three-screen-pixel hop every step - the jitter you see
+			// while walking. Snapping to whole *screen* pixels instead keeps the glyphs
+			// aligned to the display grid, so the text stays sharp but moves smoothly.
+			pose.pushMatrix();
+			pose.translate((float) snap(entry.screenX, guiScale), (float) snap(entry.screenY, guiScale));
+
+			extractor.fill(-halfWidth - 2, textY - 2, halfWidth + 2, textY + font.lineHeight, BACKDROP);
+			extractor.centeredText(font, label, 0, textY, NAME_COLOR);
 
 			// A small mark at the projected point itself, so the label has an anchor.
-			extractor.fill(entry.screenX - 1, entry.screenY - 1, entry.screenX + 1, entry.screenY + 1, DOT_COLOR);
+			extractor.fill(-1, -1, 1, 1, DOT_COLOR);
+
+			pose.popMatrix();
 		}
 	}
 
-	private record Placed(Waypoint waypoint, int screenX, int screenY, double distance) {
+	/** Rounds a GUI-space coordinate to the nearest whole physical pixel. */
+	private static double snap(double value, double guiScale) {
+		return Math.round(value * guiScale) / guiScale;
+	}
+
+	private record Placed(Waypoint waypoint, double screenX, double screenY, double distance) {
 	}
 }

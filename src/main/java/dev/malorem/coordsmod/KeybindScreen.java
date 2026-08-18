@@ -19,6 +19,8 @@ public class KeybindScreen extends Screen {
 	private final Screen parent;
 	private Button quickSaveButton;
 	private Button openListButton;
+	private Button hideButton;
+	private Button untrackButton;
 	private KeyMapping listeningFor;
 
 	public KeybindScreen(Screen parent) {
@@ -29,7 +31,7 @@ public class KeybindScreen extends Screen {
 	@Override
 	protected void init() {
 		int x = width / 2 - 110;
-		int y = height / 2 - 50;
+		int y = height / 2 - 64;
 
 		quickSaveButton = addRenderableWidget(
 				Button.builder(label("Quick-save coord", Keybinds.QUICK_SAVE), b -> listen(Keybinds.QUICK_SAVE))
@@ -39,14 +41,22 @@ public class KeybindScreen extends Screen {
 				Button.builder(label("Open coord list", Keybinds.OPEN_LIST), b -> listen(Keybinds.OPEN_LIST))
 						.bounds(x, y + 24, 220, 20).build());
 
+		hideButton = addRenderableWidget(
+				Button.builder(label("Hide overlays", Keybinds.TOGGLE_HIDE), b -> listen(Keybinds.TOGGLE_HIDE))
+						.bounds(x, y + 48, 220, 20).build());
+
+		untrackButton = addRenderableWidget(
+				Button.builder(label("Stop tracking", Keybinds.UNTRACK), b -> listen(Keybinds.UNTRACK))
+						.bounds(x, y + 72, 220, 20).build());
+
 		Button hint = Button.builder(
 				Component.literal("Any key or mouse button. Escape clears."), b -> {
-				}).bounds(x, y + 52, 220, 20).build();
+				}).bounds(x, y + 100, 220, 20).build();
 		hint.active = false;
 		addRenderableWidget(hint);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
-				.bounds(x, y + 80, 220, 20).build());
+				.bounds(x, y + 128, 220, 20).build());
 	}
 
 	private void listen(KeyMapping mapping) {
@@ -69,6 +79,8 @@ public class KeybindScreen extends Screen {
 	private void refresh() {
 		quickSaveButton.setMessage(label("Quick-save coord", Keybinds.QUICK_SAVE));
 		openListButton.setMessage(label("Open coord list", Keybinds.OPEN_LIST));
+		hideButton.setMessage(label("Hide overlays", Keybinds.TOGGLE_HIDE));
+		untrackButton.setMessage(label("Stop tracking", Keybinds.UNTRACK));
 	}
 
 	@Override

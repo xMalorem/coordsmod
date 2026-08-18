@@ -2,6 +2,7 @@ package dev.malorem.coordsmod;
 
 import org.joml.Matrix3x2fStack;
 
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -52,6 +53,32 @@ public final class Tracker {
 	public static void register() {
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, HUD_ID, (extractor, delta) -> draw(extractor));
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(Tracker::restore));
+
+		// Checked on the tick rather than while drawing, so arriving does not mutate
+		// state from inside a render pass.
+		ClientTickEvents.END_CLIENT_TICK.register(Tracker::checkAutoUntrack);
+	}
+
+	/** Drops the pin once you are close enough, if that is switched on. */
+	private static void checkAutoUntrack(Minecraft client) {
+		Waypoint target = waypoint;
+		double radius = Config.get().autoUntrack;
+
+		if (target == null || radius <= 0.0) {
+			return;
+		}
+
+		if (client.player == null || client.level == null) {
+			return;
+		}
+
+		if (!client.level.dimension().identifier().toString().equals(dimension)) {
+			return;
+		}
+
+		if (Geo.horizontalDistance(client.player.position(), target) <= radius) {
+			clear();
+		}
 	}
 
 	public static void track(String dimensionId, Waypoint target) {
@@ -129,7 +156,7 @@ public final class Tracker {
 	private static void draw(GuiGraphicsExtractor extractor) {
 		Waypoint target = waypoint;
 
-		if (target == null) {
+		if (target == null || Config.get().hidden) {
 			return;
 		}
 

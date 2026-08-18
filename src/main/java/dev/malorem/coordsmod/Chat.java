@@ -52,6 +52,11 @@ public final class Chat {
 			line = line.append(Component.literal("  " + converted).withStyle(ChatFormatting.GRAY));
 		}
 
+		// Worth saying here too, or a hidden label looks like a broken one.
+		if (waypoint.hidden) {
+			line = line.append(Component.literal("  (label hidden)").withStyle(ChatFormatting.DARK_GRAY));
+		}
+
 		String copy = waypoint.x + " " + waypoint.y + " " + waypoint.z;
 		StringBuilder tooltip = new StringBuilder("Click to copy  " + copy);
 

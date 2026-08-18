@@ -11,6 +11,13 @@ public class Waypoint {
 	public int z;
 	public long created;
 
+	/**
+	 * Hides just this waypoint's in-world label. It stays saved, listed and
+	 * trackable - only the floating label is suppressed. Absent from older files,
+	 * which Gson leaves as false.
+	 */
+	public boolean hidden;
+
 	public Waypoint() {
 	}
 

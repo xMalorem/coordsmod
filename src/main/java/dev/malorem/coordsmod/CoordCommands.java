@@ -111,6 +111,10 @@ public final class CoordCommands {
 			dispatcher.register(literal("cgui").executes(ctx -> openScreen(new WaypointScreen(null))));
 			dispatcher.register(literal("cconfig").executes(ctx -> openScreen(new ConfigScreen(null))));
 			dispatcher.register(literal("clabels").executes(CoordCommands::toggleLabels));
+			dispatcher.register(literal("chide").executes(ctx -> {
+				Keybinds.toggleHidden();
+				return 1;
+			}));
 
 			// /chelp - list every command
 			dispatcher.register(literal("chelp").executes(CoordCommands::help));
@@ -437,6 +441,7 @@ public final class CoordCommands {
 		source.sendFeedback(Chat.helpLine("/ctrack <name>", "Pin a coord to your HUD"));
 		source.sendFeedback(Chat.helpLine("/cuntrack", "Stop tracking"));
 		source.sendFeedback(Chat.helpLine("/cgui", "Open the waypoint manager"));
+		source.sendFeedback(Chat.helpLine("/chide", "Hide or show everything drawn on screen"));
 		source.sendFeedback(Chat.helpLine("/clabels", "Toggle in-world waypoint labels"));
 		source.sendFeedback(Chat.helpLine("/cconfig", "Settings"));
 		source.sendFeedback(Chat.helpLine("/ckeybind", "Bind the quick-save and list keys"));

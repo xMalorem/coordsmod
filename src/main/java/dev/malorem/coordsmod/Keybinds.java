@@ -28,6 +28,13 @@ public final class Keybinds {
 	public static final KeyMapping OPEN_LIST = new KeyMapping(
 			"key.coordsmod.openlist", InputConstants.Type.KEYSYM, UNBOUND, KeyMapping.Category.MISC);
 
+	/** Master hide: pulls every drawn element off the screen in one keypress. */
+	public static final KeyMapping TOGGLE_HIDE = new KeyMapping(
+			"key.coordsmod.hide", InputConstants.Type.KEYSYM, UNBOUND, KeyMapping.Category.MISC);
+
+	public static final KeyMapping UNTRACK = new KeyMapping(
+			"key.coordsmod.untrack", InputConstants.Type.KEYSYM, UNBOUND, KeyMapping.Category.MISC);
+
 	/** Only nag once per session, however many worlds get joined. */
 	private static boolean prompted;
 
@@ -37,6 +44,8 @@ public final class Keybinds {
 	public static void register() {
 		KeyMappingHelper.registerKeyMapping(QUICK_SAVE);
 		KeyMappingHelper.registerKeyMapping(OPEN_LIST);
+		KeyMappingHelper.registerKeyMapping(TOGGLE_HIDE);
+		KeyMappingHelper.registerKeyMapping(UNTRACK);
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (QUICK_SAVE.consumeClick()) {
@@ -47,6 +56,14 @@ public final class Keybinds {
 				if (client.player != null) {
 					client.setScreenAndShow(new WaypointScreen(null));
 				}
+			}
+
+			while (TOGGLE_HIDE.consumeClick()) {
+				toggleHidden();
+			}
+
+			while (UNTRACK.consumeClick()) {
+				Tracker.clear();
 			}
 		});
 
@@ -85,6 +102,17 @@ public final class Keybinds {
 						.withClickEvent(new ClickEvent.RunCommand("/ckeybind"))
 						.withHoverEvent(new HoverEvent.ShowText(
 								Component.literal("Opens the CoordsMod key binding screen"))))));
+	}
+
+	/**
+	 * Flips the master hide. Deliberately silent - things appearing or vanishing
+	 * is the feedback, and a chat line every toggle is just noise.
+	 */
+	public static boolean toggleHidden() {
+		Config config = Config.get();
+		config.hidden = !config.hidden;
+		Config.save();
+		return config.hidden;
 	}
 
 	private static void quickSave(Minecraft client) {

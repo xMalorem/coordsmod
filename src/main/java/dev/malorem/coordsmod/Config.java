@@ -30,15 +30,24 @@ public final class Config {
 	public static final String[] COLOR_NAMES = { "Amber", "Green", "Cyan", "Red", "White" };
 
 	public static final double[] ARRIVED_RADII = { 1.0, 2.0, 3.0, 5.0, 8.0 };
+
+	/** 0 means never auto-untrack. */
+	public static final double[] AUTO_UNTRACK_RADII = { 0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 16.0 };
 	public static final double[] LABEL_DISTANCES = { 128.0, 256.0, 512.0, 1024.0 };
 
 	private static Config instance;
 
 	// ------------------------------------------------------------ persisted
 
+	/** Master switch: hides every drawn element at once, leaving the chat commands alone. */
+	public boolean hidden = false;
+
 	public boolean labels = true;
 	public double labelMaxDistance = 512.0;
 	public double arrivedRadius = 1.0;
+
+	/** Drop the pin automatically once this close. 0 keeps it pinned until told otherwise. */
+	public double autoUntrack = 0.0;
 	/** TOP or BOTTOM. */
 	public String hudPosition = "TOP";
 	public int needleColor = 0xFFFFDD55;

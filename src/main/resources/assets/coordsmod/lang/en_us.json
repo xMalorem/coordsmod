@@ -1,4 +1,6 @@
 {
 	"key.coordsmod.quicksave": "Quick-save coord",
-	"key.coordsmod.openlist": "Open coord list"
+	"key.coordsmod.openlist": "Open coord list",
+	"key.coordsmod.hide": "Hide CoordsMod overlays",
+	"key.coordsmod.untrack": "Stop tracking waypoint"
 }
