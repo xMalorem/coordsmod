@@ -109,6 +109,10 @@ divides through by `w` and would otherwise mirror them onto the screen.
 
 Toggle them all with `/clabels`, or set the draw distance in `/cconfig`.
 
+Selecting a waypoint in `/cgui` also gives you **Rename**, which edits the name
+in place and keeps the position — the same thing `/cren` does, without leaving
+the manager.
+
 Individual waypoints can be muted instead: select one in `/cgui` and press
 **Hide label**. It stays saved, listed and trackable — only its floating label
 is suppressed. Hidden ones are dimmed and marked `(label hidden)` in both the
@@ -142,6 +146,9 @@ Stepping through a nether portal records **both ends** automatically as
 `portal-N`, one in each dimension. Only Overworld↔Nether is recorded: an End
 trip or a respawn is a dimension change too, and saving those would be noise.
 Respawns are excluded explicitly via a short post-death cooldown.
+
+There is no command — it is automatic. Turn it off in `/cconfig` under
+**Portal waypoints**, alongside **Death waypoints** for the same reason.
 
 ## How sharing works
 

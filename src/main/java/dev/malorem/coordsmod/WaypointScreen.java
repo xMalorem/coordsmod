@@ -48,6 +48,7 @@ public class WaypointScreen extends Screen {
 	private Button deleteButton;
 	private Button stopButton;
 	private Button hideButton;
+	private Button renameButton;
 
 	public WaypointScreen(Screen parent) {
 		this(parent, null, false);
@@ -96,12 +97,17 @@ public class WaypointScreen extends Screen {
 		}
 
 		int y = height - 52;
+		int slot = 76;
+		int left = width / 2 - (slot * 4 + 12) / 2;
+
 		trackButton = addRenderableWidget(Button.builder(Component.literal("Track"), b -> trackSelected())
-				.bounds(width / 2 - 154, y, 100, 20).build());
+				.bounds(left, y, slot, 20).build());
+		renameButton = addRenderableWidget(Button.builder(Component.literal("Rename"), b -> renameSelected())
+				.bounds(left + slot + 4, y, slot, 20).build());
 		hideButton = addRenderableWidget(Button.builder(hideLabel(), b -> toggleHideSelected())
-				.bounds(width / 2 - 50, y, 100, 20).build());
+				.bounds(left + (slot + 4) * 2, y, slot, 20).build());
 		deleteButton = addRenderableWidget(Button.builder(Component.literal("Delete"), b -> deleteSelected())
-				.bounds(width / 2 + 54, y, 100, 20).build());
+				.bounds(left + (slot + 4) * 3, y, slot, 20).build());
 
 		stopButton = addRenderableWidget(Button.builder(Component.literal("Stop tracking"), b -> {
 			Tracker.clear();
@@ -185,6 +191,15 @@ public class WaypointScreen extends Screen {
 		return Component.literal("Hide label");
 	}
 
+	private void renameSelected() {
+		Row row = list.getSelected();
+
+		// Returning here re-runs init(), so the list picks up the new name.
+		if (row != null && minecraft != null) {
+			minecraft.setScreenAndShow(new RenameScreen(this, row.dimensionId, row.waypoint));
+		}
+	}
+
 	private void toggleHideSelected() {
 		Row row = list.getSelected();
 
@@ -202,6 +217,7 @@ public class WaypointScreen extends Screen {
 		trackButton.active = selected;
 		deleteButton.active = selected;
 		hideButton.active = selected;
+		renameButton.active = selected;
 		hideButton.setMessage(hideLabel());
 		stopButton.active = Tracker.tracked() != null;
 	}

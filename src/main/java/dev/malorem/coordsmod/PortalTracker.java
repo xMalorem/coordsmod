@@ -32,7 +32,8 @@ public final class PortalTracker {
 			String dimensionId = client.level.dimension().identifier().toString();
 			BlockPos pos = client.player.blockPosition();
 
-			if (lastDimension != null
+			if (Config.get().portalWaypoints
+					&& lastDimension != null
 					&& !lastDimension.equals(dimensionId)
 					&& isPortalPair(lastDimension, dimensionId)
 					&& lastPos != null

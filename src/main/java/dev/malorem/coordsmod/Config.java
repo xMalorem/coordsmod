@@ -48,6 +48,12 @@ public final class Config {
 
 	/** Drop the pin automatically once this close. 0 keeps it pinned until told otherwise. */
 	public double autoUntrack = 0.0;
+
+	/** Record both ends of a nether portal when you step through one. */
+	public boolean portalWaypoints = true;
+
+	/** Save where you died, and pin it. */
+	public boolean deathWaypoints = true;
 	/** TOP or BOTTOM. */
 	public String hudPosition = "TOP";
 	public int needleColor = 0xFFFFDD55;

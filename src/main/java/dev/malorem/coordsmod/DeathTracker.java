@@ -46,7 +46,13 @@ public final class DeathTracker {
 			boolean alive = !player.isDeadOrDying();
 
 			if (wasAlive && !alive) {
-				save(client, player);
+				// Still tracked even when switched off, so a respawn is never mistaken
+				// for a portal transit.
+				deathCooldown = DEATH_COOLDOWN_TICKS;
+
+				if (Config.get().deathWaypoints) {
+					save(client, player);
+				}
 			}
 
 			wasAlive = alive;
