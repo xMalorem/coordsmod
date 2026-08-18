@@ -6,8 +6,9 @@ import org.slf4j.LoggerFactory;
 import net.fabricmc.api.ClientModInitializer;
 
 /**
- * Client-only entrypoint. This mod deliberately renders nothing: no HUD, no
- * overlay, no world markers. Every result goes to chat.
+ * Client-only entrypoint. Chat is still where everything lives by default; the
+ * only thing drawn is a single HUD line, and only once you pin a waypoint with
+ * /ctrack. Nothing is ever drawn into the world.
  */
 public class CoordsModClient implements ClientModInitializer {
 	public static final String MOD_ID = "coordsmod";
@@ -18,6 +19,9 @@ public class CoordsModClient implements ClientModInitializer {
 		CoordCommands.register();
 		ShareHandler.register();
 		DeathTracker.register();
-		LOGGER.info("CoordsMod loaded - chat only, nothing is rendered.");
+		PortalTracker.register();
+		Keybinds.register();
+		Tracker.register();
+		LOGGER.info("CoordsMod loaded - chat first, HUD only while tracking.");
 	}
 }

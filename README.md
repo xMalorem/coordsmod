@@ -25,6 +25,10 @@ them to chat. Nothing is rendered on screen — no HUD, no overlay, no beacons.
 | `/cworld list` | Every stored world file |
 | `/cworld merge <key>` | Pull coords in from another stored world |
 | `/cadd <x> <y> <z> "<name>" <dimension>` | Save a shared coord — this is what the `[+Add]` button runs |
+| `/ctrack <name>` | Pin a coord to your HUD |
+| `/cuntrack` | Stop tracking |
+| `/cgui` | Open the waypoint manager |
+| `/ckeybind` | Bind the quick-save and list keys |
 | `/chelp` | List every command; each usage is clickable and drops the command into the chat box |
 
 All of these are **client commands**. They never reach the server, so they work
@@ -48,11 +52,43 @@ on any server and in singleplayer.
   portal conversion in full.
 * Long lists stop at 20 entries per dimension with an `... and N more` line.
 
+## Keys
+
+Both keybinds ship **unbound**, because guessing at a key that clashes with
+another mod is worse than asking. The first time you join a world without a
+quick-save key, chat offers a clickable `[Bind a key]` prompt that opens the
+binding screen; `/ckeybind` opens it any time, and both keys also appear in
+vanilla Controls under Miscellaneous.
+
+* **Quick-save** — saves where you stand without opening chat.
+* **Open coord list** — opens the waypoint manager.
+
+## Tracking
+
+`/ctrack <name>` pins one waypoint to a single HUD line:
+
+```
+→ base  182m NW
+```
+
+This is the only thing the mod draws. Nothing appears until you pin something,
+so chat-only remains the default behaviour. The line hides itself when you are
+in a different dimension to the tracked point, rather than showing a bearing
+that means nothing.
+
 ## Death locations
 
-Dying auto-saves where you died as `death-1`, `death-2`, … and announces it in
-chat. `/cs` is useless at the one moment you most need it — you are looking at
-the death screen — so this happens without being asked.
+Dying auto-saves where you died as `death-1`, `death-2`, … announces it in chat,
+and immediately makes it the tracked waypoint so you can walk the HUD line back
+to your stuff. `/cs` is useless at the one moment you most need it — you are
+looking at the death screen — so this happens without being asked.
+
+## Portals
+
+Stepping through a nether portal records **both ends** automatically as
+`portal-N`, one in each dimension. Only Overworld↔Nether is recorded: an End
+trip or a respawn is a dimension change too, and saving those would be noise.
+Respawns are excluded explicitly via a short post-death cooldown.
 
 ## How sharing works
 

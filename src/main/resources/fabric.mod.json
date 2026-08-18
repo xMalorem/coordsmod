@@ -3,7 +3,7 @@
 	"id": "coordsmod",
 	"version": "${version}",
 	"name": "CoordsMod",
-	"description": "Chat-only coordinate bookmarks. Nothing renders on screen; every result is printed to chat.",
+	"description": "Coordinate bookmarks that live in chat. Save, list, share and track coords without a minimap; the only thing drawn is one optional HUD line.",
 	"authors": [
 		"Malorem"
 	],

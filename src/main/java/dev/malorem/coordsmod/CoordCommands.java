@@ -12,6 +12,8 @@ import com.mojang.brigadier.context.CommandContext;
 
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -94,6 +96,19 @@ public final class CoordCommands {
 									.suggests((ctx, builder) -> SharedSuggestionProvider
 											.suggest(CoordStore.worldKeys(), builder))
 									.executes(CoordCommands::worldMerge))));
+
+			// /ctrack <name> - pin one waypoint to the HUD; /cuntrack removes it
+			dispatcher.register(literal("ctrack")
+					.then(argument("name", StringArgumentType.greedyString())
+							.suggests((ctx, builder) -> SharedSuggestionProvider
+									.suggest(namesIn(currentDimension(ctx)), builder))
+							.executes(CoordCommands::track)));
+
+			dispatcher.register(literal("cuntrack").executes(CoordCommands::untrack));
+
+			// screens
+			dispatcher.register(literal("ckeybind").executes(ctx -> openScreen(new KeybindScreen(null))));
+			dispatcher.register(literal("cgui").executes(ctx -> openScreen(new WaypointScreen(null, 0))));
 
 			// /chelp - list every command
 			dispatcher.register(literal("chelp").executes(CoordCommands::help));
@@ -303,6 +318,44 @@ public final class CoordCommands {
 		return 1;
 	}
 
+	// --------------------------------------------------------- tracking, GUIs
+
+	private static int track(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		String dimensionId = currentDimension(ctx);
+		String name = CoordStore.sanitizeName(StringArgumentType.getString(ctx, "name"));
+		Waypoint waypoint = CoordStore.find(dimensionId, name);
+
+		if (waypoint == null) {
+			source.sendError(Chat.error("No coord named \"" + name + "\" in "
+					+ Dimensions.displayName(dimensionId) + "."));
+			return 0;
+		}
+
+		Tracker.track(dimensionId, waypoint);
+		source.sendFeedback(Chat.info("Tracking " + waypoint.name + " on your HUD. /cuntrack to stop."));
+		return 1;
+	}
+
+	private static int untrack(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+
+		if (!Tracker.clear()) {
+			source.sendError(Chat.error("Nothing is being tracked."));
+			return 0;
+		}
+
+		source.sendFeedback(Chat.info("Stopped tracking."));
+		return 1;
+	}
+
+	/** Screens cannot open while the command is still executing, so defer a tick. */
+	private static int openScreen(Screen screen) {
+		Minecraft client = Minecraft.getInstance();
+		client.execute(() -> client.setScreenAndShow(screen));
+		return 1;
+	}
+
 	// -------------------------------------------------------------- /cworld
 
 	private static int world(CommandContext<FabricClientCommandSource> ctx) {
@@ -370,6 +423,10 @@ public final class CoordCommands {
 		source.sendFeedback(Chat.helpLine("/sc <player> <name>", "Whisper a saved coord to a player"));
 		source.sendFeedback(Chat.helpLine("/scall", "Send your current position to public chat"));
 		source.sendFeedback(Chat.helpLine("/scall <name>", "Send a saved coord to public chat"));
+		source.sendFeedback(Chat.helpLine("/ctrack <name>", "Pin a coord to your HUD"));
+		source.sendFeedback(Chat.helpLine("/cuntrack", "Stop tracking"));
+		source.sendFeedback(Chat.helpLine("/cgui", "Open the waypoint manager"));
+		source.sendFeedback(Chat.helpLine("/ckeybind", "Bind the quick-save and list keys"));
 		source.sendFeedback(Chat.helpLine("/cworld", "Which storage file this world uses"));
 		source.sendFeedback(Chat.helpLine("/cworld merge <key>", "Pull coords in from another stored world"));
 		source.sendFeedback(Chat.helpLine("/cadd <x> <y> <z> <name> <dim>", "Save a shared coord - the [+Add] button"));
