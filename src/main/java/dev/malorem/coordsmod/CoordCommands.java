@@ -1,6 +1,7 @@
 package dev.malorem.coordsmod;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -13,12 +14,16 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.argument;
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommands.literal;
 
 /** Registers every client-side command. Nothing here touches the server. */
 public final class CoordCommands {
+	/** Chat scrollback is finite; past this a listing is noise rather than information. */
+	private static final int MAX_LISTED = 20;
+
 	private CoordCommands() {
 	}
 
@@ -48,6 +53,17 @@ public final class CoordCommands {
 									.suggest(namesIn(currentDimension(ctx)), builder))
 							.executes(ctx -> delete(ctx, StringArgumentType.getString(ctx, "name")))));
 
+			// /cundo - put back the last thing /cdel removed
+			dispatcher.register(literal("cundo").executes(CoordCommands::undo));
+
+			// /cren <old> <new> - rename in place, keeping the position
+			dispatcher.register(literal("cren")
+					.then(argument("from", StringArgumentType.string())
+							.suggests((ctx, builder) -> SharedSuggestionProvider
+									.suggest(namesIn(currentDimension(ctx)), builder))
+							.then(argument("to", StringArgumentType.greedyString())
+									.executes(CoordCommands::rename))));
+
 			// /sc <player> [name] - whisper a waypoint to one player
 			dispatcher.register(literal("sc")
 					.then(argument("player", StringArgumentType.word())
@@ -68,6 +84,16 @@ public final class CoordCommands {
 							.suggests((ctx, builder) -> SharedSuggestionProvider
 									.suggest(namesIn(currentDimension(ctx)), builder))
 							.executes(ctx -> share(ctx, null, StringArgumentType.getString(ctx, "name")))));
+
+			// /cworld - which storage file is in use, and merging between them
+			dispatcher.register(literal("cworld")
+					.executes(CoordCommands::world)
+					.then(literal("list").executes(CoordCommands::worldList))
+					.then(literal("merge")
+							.then(argument("key", StringArgumentType.greedyString())
+									.suggests((ctx, builder) -> SharedSuggestionProvider
+											.suggest(CoordStore.worldKeys(), builder))
+									.executes(CoordCommands::worldMerge))));
 
 			// /chelp - list every command
 			dispatcher.register(literal("chelp").executes(CoordCommands::help));
@@ -103,7 +129,6 @@ public final class CoordCommands {
 		boolean replaced = CoordStore.exists(dimensionId, name);
 		Waypoint waypoint = new Waypoint(name, pos.getX(), pos.getY(), pos.getZ(), System.currentTimeMillis());
 		CoordStore.put(dimensionId, waypoint);
-
 		source.sendFeedback(Chat.saved(replaced, waypoint, dimensionId));
 
 		return 1;
@@ -111,17 +136,29 @@ public final class CoordCommands {
 
 	private static int listOne(CommandContext<FabricClientCommandSource> ctx, String dimensionId) {
 		FabricClientCommandSource source = ctx.getSource();
-		List<Waypoint> waypoints = CoordStore.list(dimensionId);
+		List<Waypoint> waypoints = new ArrayList<>(CoordStore.list(dimensionId));
 
 		if (waypoints.isEmpty()) {
 			source.sendFeedback(Chat.info("No coords saved in " + Dimensions.displayName(dimensionId) + "."));
 			return 0;
 		}
 
-		source.sendFeedback(Chat.header(dimensionId, waypoints.size()));
+		// A distance is only meaningful inside the dimension you are standing in.
+		Vec3 viewer = dimensionId.equals(currentDimension(ctx)) ? source.getPlayer().position() : null;
 
-		for (int i = 0; i < waypoints.size(); i++) {
-			source.sendFeedback(Chat.entry(i + 1, waypoints.get(i)));
+		if (viewer != null) {
+			waypoints.sort(Comparator.comparingDouble(w -> Geo.horizontalDistance(viewer, w)));
+		}
+
+		source.sendFeedback(Chat.header(dimensionId, waypoints.size()));
+		int shown = Math.min(waypoints.size(), MAX_LISTED);
+
+		for (int i = 0; i < shown; i++) {
+			source.sendFeedback(Chat.entry(i + 1, waypoints.get(i), dimensionId, viewer));
+		}
+
+		if (waypoints.size() > shown) {
+			source.sendFeedback(Chat.more(waypoints.size() - shown));
 		}
 
 		return waypoints.size();
@@ -156,7 +193,43 @@ public final class CoordCommands {
 			return 0;
 		}
 
-		source.sendFeedback(Chat.info("Deleted " + name + "."));
+		source.sendFeedback(Chat.info("Deleted " + name + ".  /cundo puts it back."));
+		return 1;
+	}
+
+	private static int undo(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		Waypoint restored = CoordStore.undo();
+
+		if (restored == null) {
+			source.sendError(Chat.error("Nothing to undo."));
+			return 0;
+		}
+
+		source.sendFeedback(Chat.info("Restored " + restored.name + "  " + Chat.coords(restored) + "."));
+		return 1;
+	}
+
+	private static int rename(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		String dimensionId = currentDimension(ctx);
+		String from = CoordStore.sanitizeName(StringArgumentType.getString(ctx, "from"));
+		String to = CoordStore.sanitizeName(StringArgumentType.getString(ctx, "to"));
+
+		if (to.isEmpty()) {
+			source.sendError(Chat.error("That new name is empty after cleanup - pick another."));
+			return 0;
+		}
+
+		String result = CoordStore.rename(dimensionId, from, to);
+
+		if (result == null) {
+			source.sendError(Chat.error("No coord named \"" + from + "\" in "
+					+ Dimensions.displayName(dimensionId) + "."));
+			return 0;
+		}
+
+		source.sendFeedback(Chat.info("Renamed " + from + " to " + result + "."));
 		return 1;
 	}
 
@@ -222,13 +295,7 @@ public final class CoordCommands {
 		}
 
 		// Keep both copies rather than silently overwriting someone else's point.
-		String unique = name;
-		int suffix = 2;
-
-		while (CoordStore.exists(dimensionId, unique)) {
-			unique = name + "-" + suffix++;
-		}
-
+		String unique = CoordStore.uniqueName(dimensionId, name);
 		CoordStore.put(dimensionId, new Waypoint(unique, x, y, z, System.currentTimeMillis()));
 		source.sendFeedback(Chat.info("Added " + unique + "  " + x + ", " + y + ", " + z
 				+ " to " + Dimensions.displayName(dimensionId) + "."));
@@ -236,22 +303,78 @@ public final class CoordCommands {
 		return 1;
 	}
 
+	// -------------------------------------------------------------- /cworld
+
+	private static int world(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		source.sendFeedback(Chat.info("Storing coords under \"" + CoordStore.currentKey() + "\" ("
+				+ CoordStore.total() + " saved)."));
+		source.sendFeedback(Chat.info("/cworld list shows every stored world."));
+		return 1;
+	}
+
+	private static int worldList(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		List<String> keys = CoordStore.worldKeys();
+
+		if (keys.isEmpty()) {
+			source.sendFeedback(Chat.info("No stored worlds yet."));
+			return 0;
+		}
+
+		String current = CoordStore.currentKey();
+		source.sendFeedback(Chat.info("Stored worlds (" + keys.size() + "):"));
+
+		for (String key : keys) {
+			source.sendFeedback(Chat.info("  " + key + (key.equals(current) ? "  <- current" : "")));
+		}
+
+		return keys.size();
+	}
+
+	private static int worldMerge(CommandContext<FabricClientCommandSource> ctx) {
+		FabricClientCommandSource source = ctx.getSource();
+		String key = StringArgumentType.getString(ctx, "key").trim();
+		int merged = CoordStore.mergeFrom(key);
+
+		if (merged == -1) {
+			source.sendError(Chat.error("\"" + key + "\" is the world you are already in."));
+			return 0;
+		}
+
+		if (merged == -2) {
+			source.sendError(Chat.error("No stored world called \"" + key + "\". Try /cworld list."));
+			return 0;
+		}
+
+		source.sendFeedback(Chat.info("Merged " + merged + " coord" + (merged == 1 ? "" : "s")
+				+ " from \"" + key + "\"."));
+		return merged;
+	}
+
+	// ---------------------------------------------------------------- /chelp
+
 	private static int help(CommandContext<FabricClientCommandSource> ctx) {
 		FabricClientCommandSource source = ctx.getSource();
 		source.sendFeedback(Chat.helpHeader());
 
 		source.sendFeedback(Chat.helpLine("/cs", "Save where you are standing, auto-named"));
 		source.sendFeedback(Chat.helpLine("/cs <name>", "Save under a name - same name overwrites"));
-		source.sendFeedback(Chat.helpLine("/cl", "List coords in the dimension you are in"));
+		source.sendFeedback(Chat.helpLine("/cl", "List this dimension, nearest first"));
 		source.sendFeedback(Chat.helpLine("/cl ow|nether|end", "List one dimension"));
 		source.sendFeedback(Chat.helpLine("/cl all", "List every dimension"));
 		source.sendFeedback(Chat.helpLine("/cdel <name>", "Delete a coord from this dimension"));
+		source.sendFeedback(Chat.helpLine("/cundo", "Put back the last deleted coord"));
+		source.sendFeedback(Chat.helpLine("/cren <old> <new>", "Rename a coord, keeping its position"));
 		source.sendFeedback(Chat.helpLine("/sc <player>", "Whisper your current position to a player"));
 		source.sendFeedback(Chat.helpLine("/sc <player> <name>", "Whisper a saved coord to a player"));
 		source.sendFeedback(Chat.helpLine("/scall", "Send your current position to public chat"));
 		source.sendFeedback(Chat.helpLine("/scall <name>", "Send a saved coord to public chat"));
+		source.sendFeedback(Chat.helpLine("/cworld", "Which storage file this world uses"));
+		source.sendFeedback(Chat.helpLine("/cworld merge <key>", "Pull coords in from another stored world"));
 		source.sendFeedback(Chat.helpLine("/cadd <x> <y> <z> <name> <dim>", "Save a shared coord - the [+Add] button"));
 		source.sendFeedback(Chat.helpLine("/chelp", "This list"));
+		source.sendFeedback(Chat.info("Click any listed coord to copy it. Deaths are saved automatically."));
 
 		return 1;
 	}

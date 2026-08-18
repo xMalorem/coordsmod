@@ -15,15 +15,44 @@ them to chat. Nothing is rendered on screen — no HUD, no overlay, no beacons.
 | `/cl end` / `/cl e` | List End coords |
 | `/cl all` | List every dimension |
 | `/cdel <name>` | Delete a coord from the current dimension |
+| `/cundo` | Put back the last coord you deleted |
+| `/cren <old> <new>` | Rename a coord, keeping its position |
 | `/sc <player>` | Whisper your current position to one player |
 | `/sc <player> <name>` | Whisper a saved coord to one player |
 | `/scall` | Send your current position to public chat |
 | `/scall <name>` | Send a saved coord to public chat |
+| `/cworld` | Which storage file this world is using, and how many coords are in it |
+| `/cworld list` | Every stored world file |
+| `/cworld merge <key>` | Pull coords in from another stored world |
 | `/cadd <x> <y> <z> "<name>" <dimension>` | Save a shared coord — this is what the `[+Add]` button runs |
 | `/chelp` | List every command; each usage is clickable and drops the command into the chat box |
 
 All of these are **client commands**. They never reach the server, so they work
 on any server and in singleplayer.
+
+## What a listing shows
+
+```
+[Coords] Overworld (3)
+ 1. base    120, 64, -305    182m NW    →N 15, -38
+ 2. mine    -40, 12, 88      1.2km SE   →N -5, 11
+```
+
+* **Distance and bearing.** With nothing drawn on screen these numbers are your
+  only sense of direction, so entries are sorted nearest-first. Distance is
+  horizontal only, and is shown only when you are listing the dimension you are
+  actually standing in — a distance across dimensions would be meaningless.
+* **Portal ratio.** Overworld entries show their Nether equivalent and vice
+  versa, floor-divided so negative coordinates land on the correct side.
+* **Click any entry** to copy `x y z` to your clipboard. Hovering shows the
+  portal conversion in full.
+* Long lists stop at 20 entries per dimension with an `... and N more` line.
+
+## Death locations
+
+Dying auto-saves where you died as `death-1`, `death-2`, … and announces it in
+chat. `/cs` is useless at the one moment you most need it — you are looking at
+the death screen — so this happens without being asked.
 
 ## How sharing works
 
@@ -51,6 +80,13 @@ Coords are stored per world/server so saves never mix:
 .minecraft/config/coordsmod/<server-address>.json
 .minecraft/config/coordsmod/sp_<world-name>.json
 ```
+
+Server addresses are normalised — lowercased, with a default `:25565` stripped —
+so joining as `Play.Example.com`, `play.example.com` and `play.example.com:25565`
+all resolve to the same file rather than looking like lost coordinates. If you
+do end up with a split (a renamed world, a server that moved host), `/cworld
+list` shows every file and `/cworld merge <key>` pulls one into another,
+renaming on collision instead of overwriting.
 
 ## Building
 

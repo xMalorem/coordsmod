@@ -154,10 +154,10 @@ public final class ShareHandler {
 				.append(Component.literal(" shared ").withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(name).withStyle(ChatFormatting.WHITE))
 				.append(Component.literal("  " + x + ", " + y + ", " + z).withStyle(ChatFormatting.YELLOW))
-				.append(Component.literal(" (").withStyle(ChatFormatting.DARK_GRAY))
+				.append(Component.literal(" (").withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(Dimensions.displayName(dimensionId))
 						.withStyle(Dimensions.color(dimensionId)))
-				.append(Component.literal(")").withStyle(ChatFormatting.DARK_GRAY));
+				.append(Component.literal(")").withStyle(ChatFormatting.GRAY));
 
 		Component add = Component.literal(" [+Add]").withStyle(style -> style
 				.withColor(ChatFormatting.GREEN)

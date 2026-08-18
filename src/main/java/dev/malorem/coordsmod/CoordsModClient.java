@@ -17,6 +17,7 @@ public class CoordsModClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		CoordCommands.register();
 		ShareHandler.register();
+		DeathTracker.register();
 		LOGGER.info("CoordsMod loaded - chat only, nothing is rendered.");
 	}
 }
