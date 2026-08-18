@@ -1,0 +1,22 @@
+# gradle
+.gradle/
+build/
+out/
+classes/
+
+# fabric dev client working directory
+run/
+
+# ide
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+
+# macos
+.DS_Store
