@@ -65,11 +65,22 @@ vanilla Controls under Miscellaneous.
 
 ## Tracking
 
-`/ctrack <name>` pins one waypoint to a single HUD line:
+`/ctrack <name>` pins one waypoint to a single line at the top of the screen: a
+needle, the name, and the distance.
 
-```
-→ base  182m NW
-```
+The needle points **where you actually have to walk**. It is rotated by the
+bearing relative to the way you are facing, through a full 360°, so straight up
+means dead ahead and straight down means turn around — you never have to convert
+a compass letter in your head. It eases toward each new angle rather than
+snapping between headings, and it jumps straight to the bearing when you pin a
+new waypoint instead of sweeping round to it.
+
+Step within a block of it and the needle is replaced by a green tick and the
+distance becomes `here`, so arriving is its own state rather than a number
+counting down to zero.
+
+Both the needle and the tick are drawn as flat-coloured geometry rather than
+rotated text, which would resample the font atlas and come out blurry.
 
 This is the only thing the mod draws. Nothing appears until you pin something,
 so chat-only remains the default behaviour. The line hides itself when you are

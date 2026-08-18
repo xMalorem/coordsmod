@@ -108,7 +108,7 @@ public final class CoordCommands {
 
 			// screens
 			dispatcher.register(literal("ckeybind").executes(ctx -> openScreen(new KeybindScreen(null))));
-			dispatcher.register(literal("cgui").executes(ctx -> openScreen(new WaypointScreen(null, 0))));
+			dispatcher.register(literal("cgui").executes(ctx -> openScreen(new WaypointScreen(null))));
 
 			// /chelp - list every command
 			dispatcher.register(literal("chelp").executes(CoordCommands::help));

@@ -45,7 +45,7 @@ public final class Keybinds {
 
 			while (OPEN_LIST.consumeClick()) {
 				if (client.player != null) {
-					client.setScreenAndShow(new WaypointScreen(null, 0));
+					client.setScreenAndShow(new WaypointScreen(null));
 				}
 			}
 		});

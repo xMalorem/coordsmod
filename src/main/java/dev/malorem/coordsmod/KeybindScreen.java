@@ -6,6 +6,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -38,8 +39,11 @@ public class KeybindScreen extends Screen {
 				Button.builder(label("Open coord list", Keybinds.OPEN_LIST), b -> listen(Keybinds.OPEN_LIST))
 						.bounds(x, y + 24, 220, 20).build());
 
-		addRenderableWidget(Button.builder(Component.literal("Escape clears a binding"), b -> {
-		}).bounds(x, y + 52, 220, 20).build());
+		Button hint = Button.builder(
+				Component.literal("Any key or mouse button. Escape clears."), b -> {
+				}).bounds(x, y + 52, 220, 20).build();
+		hint.active = false;
+		addRenderableWidget(hint);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
 				.bounds(x, y + 80, 220, 20).build());
@@ -75,7 +79,26 @@ public class KeybindScreen extends Screen {
 
 		InputConstants.Key key = InputConstants.getKey(event);
 		// Escape clears the binding rather than binding Escape itself.
-		listeningFor.setKey(key.equals(ESCAPE) ? InputConstants.UNKNOWN : key);
+		bind(key.equals(ESCAPE) ? InputConstants.UNKNOWN : key);
+		return true;
+	}
+
+	/**
+	 * Mouse buttons are bindable too. Checked before super so that the click which
+	 * starts listening is not itself captured as the binding.
+	 */
+	@Override
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (listeningFor == null) {
+			return super.mouseClicked(event, doubleClick);
+		}
+
+		bind(InputConstants.Type.MOUSE.getOrCreate(event.button()));
+		return true;
+	}
+
+	private void bind(InputConstants.Key key) {
+		listeningFor.setKey(key);
 		KeyMapping.resetMapping();
 
 		if (minecraft != null) {
@@ -84,7 +107,6 @@ public class KeybindScreen extends Screen {
 
 		listeningFor = null;
 		refresh();
-		return true;
 	}
 
 	@Override
