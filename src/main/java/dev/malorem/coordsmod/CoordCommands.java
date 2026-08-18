@@ -109,6 +109,8 @@ public final class CoordCommands {
 			// screens
 			dispatcher.register(literal("ckeybind").executes(ctx -> openScreen(new KeybindScreen(null))));
 			dispatcher.register(literal("cgui").executes(ctx -> openScreen(new WaypointScreen(null))));
+			dispatcher.register(literal("cconfig").executes(ctx -> openScreen(new ConfigScreen(null))));
+			dispatcher.register(literal("clabels").executes(CoordCommands::toggleLabels));
 
 			// /chelp - list every command
 			dispatcher.register(literal("chelp").executes(CoordCommands::help));
@@ -349,6 +351,15 @@ public final class CoordCommands {
 		return 1;
 	}
 
+	private static int toggleLabels(CommandContext<FabricClientCommandSource> ctx) {
+		Config config = Config.get();
+		config.labels = !config.labels;
+		Config.save();
+
+		ctx.getSource().sendFeedback(Chat.info("In-world labels " + (config.labels ? "on" : "off") + "."));
+		return 1;
+	}
+
 	/** Screens cannot open while the command is still executing, so defer a tick. */
 	private static int openScreen(Screen screen) {
 		Minecraft client = Minecraft.getInstance();
@@ -426,6 +437,8 @@ public final class CoordCommands {
 		source.sendFeedback(Chat.helpLine("/ctrack <name>", "Pin a coord to your HUD"));
 		source.sendFeedback(Chat.helpLine("/cuntrack", "Stop tracking"));
 		source.sendFeedback(Chat.helpLine("/cgui", "Open the waypoint manager"));
+		source.sendFeedback(Chat.helpLine("/clabels", "Toggle in-world waypoint labels"));
+		source.sendFeedback(Chat.helpLine("/cconfig", "Settings"));
 		source.sendFeedback(Chat.helpLine("/ckeybind", "Bind the quick-save and list keys"));
 		source.sendFeedback(Chat.helpLine("/cworld", "Which storage file this world uses"));
 		source.sendFeedback(Chat.helpLine("/cworld merge <key>", "Pull coords in from another stored world"));

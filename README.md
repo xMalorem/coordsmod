@@ -28,6 +28,8 @@ them to chat. Nothing is rendered on screen — no HUD, no overlay, no beacons.
 | `/ctrack <name>` | Pin a coord to your HUD |
 | `/cuntrack` | Stop tracking |
 | `/cgui` | Open the waypoint manager |
+| `/clabels` | Toggle in-world waypoint labels |
+| `/cconfig` | Settings |
 | `/ckeybind` | Bind the quick-save and list keys |
 | `/chelp` | List every command; each usage is clickable and drops the command into the chat box |
 
@@ -87,6 +89,28 @@ so chat-only remains the default behaviour. The line hides itself when you are
 in a different dimension to the tracked point, rather than showing a bearing
 that means nothing.
 
+## In-world labels
+
+Every waypoint in your current dimension is drawn floating at its real position,
+showing its name and how far away it is, always legible through terrain.
+
+No mixins are involved. Minecraft 26.2 exposes
+`GameRenderer.projectPointToScreen`, so each waypoint is projected to a screen
+position and drawn as ordinary HUD text — which keeps the text crisp at any
+distance. Points behind the camera are culled explicitly, because the projection
+divides through by `w` and would otherwise mirror them onto the screen.
+
+Toggle with `/clabels`, or set the draw distance in `/cconfig`.
+
+## Settings
+
+`/cconfig` covers in-world labels on/off, label draw distance, arrival radius,
+whether the tracker sits at the top or bottom of the screen, and the needle
+colour. Everything is stored in `.minecraft/config/coordsmod/config.json`.
+
+The tracked waypoint is remembered per world, so it is still pinned when you
+come back.
+
 ## Death locations
 
 Dying auto-saves where you died as `death-1`, `death-2`, … announces it in chat,
@@ -142,6 +166,9 @@ Requires **JDK 25** (Minecraft 26.2 targets Java 25).
 ```powershell
 .\gradlew build
 ```
+
+`build` also runs the unit tests covering the bearing/distance maths and the
+command argument tree. CI runs the same on every push.
 
 The mod jar lands in `build/libs/coordsmod-1.0.0.jar`. Drop it in your `mods`
 folder along with [Fabric API](https://modrinth.com/mod/fabric-api).

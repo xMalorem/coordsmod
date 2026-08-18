@@ -8,6 +8,7 @@
 		"Malorem"
 	],
 	"license": "MIT",
+	"icon": "assets/coordsmod/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [

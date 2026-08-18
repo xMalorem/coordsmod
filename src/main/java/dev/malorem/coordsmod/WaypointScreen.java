@@ -3,6 +3,7 @@ package dev.malorem.coordsmod;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -14,12 +15,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * The waypoint manager: a real scrollable list, nearest first, with the actions
- * on a footer bar operating on the selected row.
+ * The waypoint manager: a scrollable list, nearest first, with the actions on a
+ * footer bar operating on the selected row. The dimension button cycles through
+ * the three vanilla dimensions and an "All" view.
  */
 public class WaypointScreen extends Screen {
 	private static final int ROW_HEIGHT = 26;
-	private static final int HEADER = 32;
+	private static final int LIST_TOP = 32;
 	private static final int FOOTER = 64;
 
 	private static final int NAME_COLOR = 0xFFFFFFFF;
@@ -27,9 +29,18 @@ public class WaypointScreen extends Screen {
 	private static final int COORD_COLOR = 0xFFAAAAAA;
 	private static final int DISTANCE_COLOR = 0xFF55DDFF;
 
+	/** Cycle order for the dimension button; null is the "All" view. */
+	private static final String[] VIEWS = {
+			Dimensions.OVERWORLD, Dimensions.NETHER, Dimensions.END, null
+	};
+
 	private final Screen parent;
 
-	private String dimensionId = Dimensions.OVERWORLD;
+	/** Which dimension is being listed, or null for all of them. */
+	private String view;
+	private boolean viewChosen;
+
+	private String playerDimension = Dimensions.OVERWORLD;
 	private Vec3 viewer;
 	private WaypointList list;
 	private Button trackButton;
@@ -37,8 +48,14 @@ public class WaypointScreen extends Screen {
 	private Button stopButton;
 
 	public WaypointScreen(Screen parent) {
+		this(parent, null, false);
+	}
+
+	private WaypointScreen(Screen parent, String view, boolean viewChosen) {
 		super(Component.literal("Coords"));
 		this.parent = parent;
+		this.view = view;
+		this.viewChosen = viewChosen;
 	}
 
 	@Override
@@ -46,22 +63,34 @@ public class WaypointScreen extends Screen {
 		Minecraft client = Minecraft.getInstance();
 
 		if (client.level != null) {
-			dimensionId = client.level.dimension().identifier().toString();
+			playerDimension = client.level.dimension().identifier().toString();
+		}
+
+		// First open lands on wherever the player actually is.
+		if (!viewChosen) {
+			view = playerDimension;
+			viewChosen = true;
 		}
 
 		viewer = client.player != null ? client.player.position() : null;
 
-		list = new WaypointList(client, width, height - HEADER - FOOTER, HEADER, ROW_HEIGHT);
+		addRenderableWidget(Button.builder(viewLabel(), b -> reopen(nextView()))
+				.bounds(width / 2 - 80, 6, 160, 20).build());
+
+		list = new WaypointList(client, width, height - LIST_TOP - FOOTER, LIST_TOP, ROW_HEIGHT);
 		addRenderableWidget(list);
 
-		List<Waypoint> waypoints = new ArrayList<>(CoordStore.list(dimensionId));
+		for (Map.Entry<String, List<Waypoint>> entry : visible().entrySet()) {
+			String dimensionId = entry.getKey();
+			List<Waypoint> waypoints = new ArrayList<>(entry.getValue());
 
-		if (viewer != null) {
-			waypoints.sort(Comparator.comparingDouble(w -> Geo.horizontalDistance(viewer, w)));
-		}
+			if (viewer != null && dimensionId.equals(playerDimension)) {
+				waypoints.sort(Comparator.comparingDouble(w -> Geo.horizontalDistance(viewer, w)));
+			}
 
-		for (Waypoint waypoint : waypoints) {
-			list.add(waypoint);
+			for (Waypoint waypoint : waypoints) {
+				list.add(dimensionId, waypoint);
+			}
 		}
 
 		int y = height - 52;
@@ -80,16 +109,64 @@ public class WaypointScreen extends Screen {
 		updateButtons();
 	}
 
+	/** The dimensions currently in scope, in a stable order. */
+	private Map<String, List<Waypoint>> visible() {
+		Map<String, List<Waypoint>> all = CoordStore.all();
+		Map<String, List<Waypoint>> result = new java.util.LinkedHashMap<>();
+
+		if (view != null) {
+			List<Waypoint> waypoints = all.get(view);
+
+			if (waypoints != null && !waypoints.isEmpty()) {
+				result.put(view, waypoints);
+			}
+
+			return result;
+		}
+
+		for (String known : List.of(Dimensions.OVERWORLD, Dimensions.NETHER, Dimensions.END)) {
+			if (all.containsKey(known)) {
+				result.put(known, all.get(known));
+			}
+		}
+
+		for (Map.Entry<String, List<Waypoint>> entry : all.entrySet()) {
+			result.putIfAbsent(entry.getKey(), entry.getValue());
+		}
+
+		return result;
+	}
+
+	private String nextView() {
+		for (int i = 0; i < VIEWS.length; i++) {
+			if (java.util.Objects.equals(VIEWS[i], view)) {
+				return VIEWS[(i + 1) % VIEWS.length];
+			}
+		}
+
+		return VIEWS[0];
+	}
+
+	private Component viewLabel() {
+		if (view == null) {
+			return Component.literal("All dimensions");
+		}
+
+		return Component.literal(Dimensions.displayName(view)).withStyle(Dimensions.color(view));
+	}
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float partialTick) {
 		super.extractRenderState(extractor, mouseX, mouseY, partialTick);
 
-		Component heading = Component.literal(Dimensions.displayName(dimensionId))
-				.withStyle(Dimensions.color(dimensionId))
-				.append(Component.literal("  " + CoordStore.list(dimensionId).size() + " saved")
-						.withStyle(ChatFormatting.GRAY));
+		int count = 0;
 
-		extractor.centeredText(font, heading, width / 2, 12, 0xFFFFFFFF);
+		for (List<Waypoint> waypoints : visible().values()) {
+			count += waypoints.size();
+		}
+
+		extractor.centeredText(font, Component.literal(count + " saved").withStyle(ChatFormatting.GRAY),
+				width / 2, height - 66, 0xFFFFFFFF);
 	}
 
 	private void updateButtons() {
@@ -103,7 +180,7 @@ public class WaypointScreen extends Screen {
 		Row row = list.getSelected();
 
 		if (row != null) {
-			Tracker.track(dimensionId, row.waypoint);
+			Tracker.track(row.dimensionId, row.waypoint);
 			updateButtons();
 		}
 	}
@@ -115,11 +192,14 @@ public class WaypointScreen extends Screen {
 			return;
 		}
 
-		CoordStore.remove(dimensionId, row.waypoint.name);
+		CoordStore.remove(row.dimensionId, row.waypoint.name);
+		reopen(view);
+	}
 
-		// Rebuilding by reopening keeps init() as the single layout path.
+	/** Rebuilt by reopening rather than mutating widgets, which keeps init() the single layout path. */
+	private void reopen(String targetView) {
 		if (minecraft != null) {
-			minecraft.setScreenAndShow(new WaypointScreen(parent));
+			minecraft.setScreenAndShow(new WaypointScreen(parent, targetView, true));
 		}
 	}
 
@@ -142,15 +222,17 @@ public class WaypointScreen extends Screen {
 			return 300;
 		}
 
-		void add(Waypoint waypoint) {
-			addEntry(new Row(waypoint));
+		void add(String dimensionId, Waypoint waypoint) {
+			addEntry(new Row(dimensionId, waypoint));
 		}
 	}
 
 	private class Row extends ObjectSelectionList.Entry<Row> {
+		private final String dimensionId;
 		private final Waypoint waypoint;
 
-		Row(Waypoint waypoint) {
+		Row(String dimensionId, Waypoint waypoint) {
+			this.dimensionId = dimensionId;
 			this.waypoint = waypoint;
 		}
 
@@ -163,9 +245,18 @@ public class WaypointScreen extends Screen {
 
 			extractor.text(font, Component.literal(isTracked ? "→ " + waypoint.name : waypoint.name),
 					x, y + 2, isTracked ? TRACKED_COLOR : NAME_COLOR);
-			extractor.text(font, Component.literal(Chat.coords(waypoint)), x, y + 13, COORD_COLOR);
 
-			if (viewer != null) {
+			Component detail = Component.literal(Chat.coords(waypoint));
+
+			if (view == null) {
+				detail = detail.copy().append(Component.literal("  " + Dimensions.displayName(dimensionId))
+						.withStyle(Dimensions.color(dimensionId)));
+			}
+
+			extractor.text(font, detail, x, y + 13, COORD_COLOR);
+
+			// A distance only means anything for the dimension the player is standing in.
+			if (viewer != null && dimensionId.equals(playerDimension)) {
 				String away = Geo.relative(viewer, waypoint);
 				extractor.text(font, Component.literal(away),
 						getContentRight() - font.width(away), y + 8, DISTANCE_COLOR);

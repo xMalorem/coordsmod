@@ -6,9 +6,9 @@ import org.slf4j.LoggerFactory;
 import net.fabricmc.api.ClientModInitializer;
 
 /**
- * Client-only entrypoint. Chat is still where everything lives by default; the
- * only thing drawn is a single HUD line, and only once you pin a waypoint with
- * /ctrack. Nothing is ever drawn into the world.
+ * Client-only entrypoint. Chat is still the primary surface: every command
+ * answers there, and the drawn parts - the tracker needle and the in-world
+ * labels - are both optional and configurable via /cconfig.
  */
 public class CoordsModClient implements ClientModInitializer {
 	public static final String MOD_ID = "coordsmod";
@@ -22,6 +22,7 @@ public class CoordsModClient implements ClientModInitializer {
 		PortalTracker.register();
 		Keybinds.register();
 		Tracker.register();
-		LOGGER.info("CoordsMod loaded - chat first, HUD only while tracking.");
+		Labels.register();
+		LOGGER.info("CoordsMod loaded - chat first, with an optional tracker and in-world labels.");
 	}
 }
